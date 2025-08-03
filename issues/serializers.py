@@ -24,7 +24,6 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['author', 'created_at']
 
-# Serializer Issue avec les commentaires imbriqués
 class IssueSerializer(serializers.ModelSerializer):
     created_by = UserMinimalSerializer(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
@@ -33,6 +32,7 @@ class IssueSerializer(serializers.ModelSerializer):
         model = Issue
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at']
+
 
 # Serializer inscription utilisateur
 class RegisterSerializer(serializers.ModelSerializer):

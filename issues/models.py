@@ -19,6 +19,14 @@ class Issue(models.Model):
         ('high', 'Haute'),
     ]
 
+    project = models.ForeignKey(
+    'Projet',
+    on_delete=models.CASCADE,
+    related_name='issues',
+    null=True,  # Autorise les valeurs NULL
+    blank=True  # Autorise le champ vide dans les formulaires
+)
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
@@ -28,6 +36,7 @@ class Issue(models.Model):
 
     def __str__(self):
         return self.title
+
 
 class Comment(models.Model):
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
@@ -49,7 +58,7 @@ class Projet(models.Model):
     nom = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    date_debut = models.DateField()
+    date_debut = models.DateField(null=True, blank=True)
     date_fin = models.DateField(null=True, blank=True)
     chef_projet = models.ForeignKey(
     User,

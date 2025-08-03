@@ -8,18 +8,26 @@ from .serializers import (
     ProjetSerializer
 )
 from django.contrib.auth.models import User
-from .permissions import IsAuthorOrReadOnly
+from .permissions import IsAuthorOrReadOnly,IsContributorOrProjectOwner
 from rest_framework.permissions import IsAuthenticated
 
 
+
+
 class IssueViewSet(viewsets.ModelViewSet):
-    queryset = Issue.objects.all().order_by('-created_at')
+    """
+    CRUD sur les Issues
+    - Seuls les contributeurs ou le chef du projet peuvent créer, lire, modifier, supprimer
+    """
+    queryset = Issue.objects.all()
     serializer_class = IssueSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated, IsContributorOrProjectOwner]
 
     def perform_create(self, serializer):
+        """
+        Associe automatiquement l'utilisateur connecté comme 'created_by'
+        """
         serializer.save(created_by=self.request.user)
-
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all().order_by('-created_at')
@@ -43,5 +51,4 @@ class ProjetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Assigne automatiquement le chef de projet (utilisateur connecté)
         serializer.save(chef_projet=self.request.user)

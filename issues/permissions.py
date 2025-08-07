@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from .models import Projet
 
 class IsContributorOrProjectOwner(BasePermission):
@@ -17,7 +17,7 @@ class IsContributorOrProjectOwner(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Pour POST (création d'une issue), on doit vérifier sur le projet
+        # Cas particulier pour POST (création d'une issue)
         if request.method == "POST":
             project_id = request.data.get("project")
             if not project_id:
@@ -25,11 +25,11 @@ class IsContributorOrProjectOwner(BasePermission):
             try:
                 project = Projet.objects.get(id=project_id)
             except Projet.DoesNotExist:
-                # Projet inexistant → l'URL est valide mais l'objet pas trouvé → 404
                 return False
             return self._is_contributor_or_owner(request.user, project)
 
-        # Pour GET, PUT, DELETE → DRF appellera has_object_permission
+        # Pour toutes les autres méthodes, on ne vérifie rien ici
+        # → la méthode has_object_permission sera appelée plus tard
         return True
 
     def has_object_permission(self, request, view, obj):

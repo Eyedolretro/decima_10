@@ -15,19 +15,26 @@ from rest_framework.permissions import IsAuthenticated
 
 
 class IssueViewSet(viewsets.ModelViewSet):
-    """
-    CRUD sur les Issues
-    - Seuls les contributeurs ou le chef du projet peuvent créer, lire, modifier, supprimer
-    """
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     permission_classes = [IsAuthenticated, IsContributorOrProjectOwner]
 
+    def get_queryset(self):
+        user = self.request.user
+        return Issue.objects.filter(
+            project__collaborateurs=user
+        ) | Issue.objects.filter(
+            project__chef_projet=user
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def perform_create(self, serializer):
-        """
-        Associe automatiquement l'utilisateur connecté comme 'created_by'
-        """
         serializer.save(created_by=self.request.user)
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all().order_by('-created_at')
@@ -52,3 +59,16 @@ class ProjetViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(chef_projet=self.request.user)
+
+    def get_queryset(self):
+        user = self.request.user
+        return Projet.objects.filter(
+            models.Q(chef_projet=user) | models.Q(collaborateurs=user)
+        ).distinct()
+
+
+
+
+
+
+   

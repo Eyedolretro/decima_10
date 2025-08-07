@@ -4,12 +4,7 @@ from .models import Issue, Comment, Projet
 
 User = get_user_model()
 
-class UserMinimalSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username']
-
-# Serializer complet utilisateur (si besoin)
+# Serializer utilisateur minimal
 class UserMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -33,6 +28,21 @@ class IssueSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at']
 
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("Utilisateur non authentifié.")
+
+        project = validated_data.get('project')
+        user = request.user
+
+        if user != project.chef_projet and not project.collaborateurs.filter(id=user.id).exists():
+            raise serializers.ValidationError("Vous n'avez pas le droit de créer une issue sur ce projet.")
+
+        # Ne pas passer created_by deux fois
+        validated_data['created_by'] = user
+
+        return super().create(validated_data)
 
 # Serializer inscription utilisateur
 class RegisterSerializer(serializers.ModelSerializer):

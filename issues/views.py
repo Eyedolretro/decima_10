@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, generics
+from rest_framework import viewsets, permissions, generics, status
 from django.db import models  # Nécessaire pour Q()
 from .models import Issue, Comment, Projet
 from .serializers import (
@@ -8,10 +8,10 @@ from .serializers import (
     ProjetSerializer
 )
 from django.contrib.auth.models import User
-from .permissions import IsAuthorOrReadOnly,IsContributorOrProjectOwner
+from .permissions import IsAuthorOrReadOnly, IsContributorOrProjectOwner
 from rest_framework.permissions import IsAuthenticated
-
-
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 class IssueViewSet(viewsets.ModelViewSet):
@@ -66,9 +66,24 @@ class ProjetViewSet(viewsets.ModelViewSet):
             models.Q(chef_projet=user) | models.Q(collaborateurs=user)
         ).distinct()
 
+    @action(detail=True, methods=['patch'], url_path='collaborateurs/(?P<user_id>[^/.]+)')
+    def update_collaborateur_role(self, request, pk=None, user_id=None):
+        projet = self.get_object()
+        try:
+            collaborateur = projet.collaborateurs.get(id=user_id)
+        except projet.collaborateurs.model.DoesNotExist:
+            return Response({'detail': 'Collaborateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
 
+        role = request.data.get('role')
+        if role not in ['chef', 'contributeur']:
+            return Response({'detail': 'Rôle invalide'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Utilise le related_name défini dans la classe ProjetCollaborateur (à adapter selon ton modèle)
+        relation = projet.collaborateurs_relations.filter(user=collaborateur).first()
+        if not relation:
+            return Response({'detail': 'Relation collaborateur-projet introuvable'}, status=status.HTTP_404_NOT_FOUND)
 
+        relation.role = role
+        relation.save()
 
-
-   
+        return Response({'detail': f'Rôle de {collaborateur.username} mis à jour en {role}'}, status=status.HTTP_200_OK)

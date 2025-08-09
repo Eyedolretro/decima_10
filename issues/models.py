@@ -61,14 +61,37 @@ class Projet(models.Model):
     date_debut = models.DateField(null=True, blank=True)
     date_fin = models.DateField(null=True, blank=True)
     chef_projet = models.ForeignKey(
-    User,
-    on_delete=models.CASCADE,
-    related_name='projets_auteur',
-)
+        User,
+        on_delete=models.CASCADE,
+        related_name='projets_auteur',
+    )
 
-    collaborateurs = models.ManyToManyField(User, related_name='projets_collaborateur', blank=True)
+    # ManyToMany avec classe intermédiaire "through"
+    collaborateurs = models.ManyToManyField(
+        User,
+        through='ProjetCollaborateur',
+        related_name='projets_collaborateur',
+        blank=True,
+    )
     cree_le = models.DateTimeField(auto_now_add=True)
     modifie_le = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.nom
+
+# Classe intermédiaire pour stocker le rôle du collaborateur
+class ProjetCollaborateur(models.Model):
+    ROLE_CHOICES = [
+        ('chef', 'Chef de projet'),
+        ('contributeur', 'Contributeur'),
+    ]
+
+    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name='collaborateurs_relations')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='contributeur')
+
+    class Meta:
+        unique_together = ('projet', 'user')  # un utilisateur ne peut être qu’une fois sur un projet
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role}) sur {self.projet.nom}"

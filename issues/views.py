@@ -12,6 +12,8 @@ from .permissions import IsAuthorOrReadOnly, IsContributorOrProjectOwner
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Q
+
 
 
 class IssueViewSet(viewsets.ModelViewSet):
@@ -22,10 +24,8 @@ class IssueViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return Issue.objects.filter(
-            project__collaborateurs=user
-        ) | Issue.objects.filter(
-            project__chef_projet=user
-        )
+        Q(project__collaborateurs=user) | Q(project__chef_projet=user)
+    ).distinct()
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

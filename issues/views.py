@@ -1,89 +1,119 @@
-from rest_framework import viewsets, permissions, generics, status
-from django.db import models  # Nécessaire pour Q()
-from .models import Issue, Comment, Projet
-from .serializers import (
-    IssueSerializer,
-    CommentSerializer,
-    RegisterSerializer,
-    ProjetSerializer
-)
-from django.contrib.auth.models import User
-from .permissions import IsAuthorOrReadOnly, IsContributorOrProjectOwner
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
+from rest_framework import viewsets, generics, permissions
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.db.models import Q
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from .models import Projet, Issue, Comment
+from .serializers import UserSerializer, ProjetSerializer, IssueSerializer, CommentSerializer
+from .permissions import IsAuthorOrAdmin
 
-
-
-class IssueViewSet(viewsets.ModelViewSet):
-    queryset = Issue.objects.all()
-    serializer_class = IssueSerializer
-    permission_classes = [IsAuthenticated, IsContributorOrProjectOwner]
-
-    def get_queryset(self):
-        user = self.request.user
-        return Issue.objects.filter(
-        Q(project__collaborateurs=user) | Q(project__chef_projet=user)
-    ).distinct()
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
-
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-
-
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all().order_by('-created_at')
-    serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
-
-# Inscription utilisateur
-class RegisterView(generics.CreateAPIView):
+# -----------------------
+# Users
+# -----------------------
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    permission_classes = (permissions.AllowAny,)
-    serializer_class = RegisterSerializer
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        if request.user != user and not request.user.is_staff:
+            return Response({"detail": "Permission denied"}, status=403)
+        return super().destroy(request, *args, **kwargs)
 
+# -----------------------
+# Projets
+# -----------------------
 class ProjetViewSet(viewsets.ModelViewSet):
     queryset = Projet.objects.all()
     serializer_class = ProjetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
 
     def perform_create(self, serializer):
         serializer.save(chef_projet=self.request.user)
 
+# -----------------------
+# Issues
+# -----------------------
+class IssueViewSet(viewsets.ModelViewSet):
+    queryset = Issue.objects.all()
+    serializer_class = IssueSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
+
+    def perform_create(self, serializer):
+        projet_id = self.kwargs.get("projet_pk")
+        projet = Projet.objects.get(pk=projet_id)
+        serializer.save(
+            project=projet,
+            created_by=self.request.user
+        )
+
     def get_queryset(self):
-        user = self.request.user
-        return Projet.objects.filter(
-            models.Q(chef_projet=user) | models.Q(collaborateurs=user)
-        ).distinct()
+        projet_id = self.kwargs.get("projet_pk")
+        if projet_id:
+            return Issue.objects.filter(project_id=projet_id)
+        return Issue.objects.all()
 
-    @action(detail=True, methods=['patch'], url_path='collaborateurs/(?P<user_id>[^/.]+)')
-    def update_collaborateur_role(self, request, pk=None, user_id=None):
-        projet = self.get_object()
+# -----------------------
+# Comments
+# -----------------------
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
+
+    def get_queryset(self):
+        projet_id = self.kwargs.get("projet_pk")
+        issue_id = self.kwargs.get("issue_pk")
+
+        qs = Comment.objects.all()
+        if issue_id:
+            qs = qs.filter(issue_id=issue_id, issue__project_id=projet_id)
+        elif projet_id:
+            qs = qs.filter(issue__project_id=projet_id)
+        return qs
+
+    def perform_create(self, serializer):
+        issue_id = self.kwargs.get('issue_pk')
+        if not issue_id:
+            raise ValueError("issue_pk manquant dans l'URL")
+        serializer.save(author=self.request.user, issue_id=issue_id)
+
+# -----------------------
+# Comments liés à un projet
+# -----------------------
+class ProjetCommentViewSet(viewsets.ViewSet):
+    """
+    Liste tous les commentaires liés aux issues d’un projet.
+    """
+    def list(self, request, projet_pk=None):
         try:
-            collaborateur = projet.collaborateurs.get(id=user_id)
-        except projet.collaborateurs.model.DoesNotExist:
-            return Response({'detail': 'Collaborateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+            projet = Projet.objects.get(pk=projet_pk)
+        except Projet.DoesNotExist:
+            return Response({"detail": "Projet non trouvé"}, status=404)
 
-        role = request.data.get('role')
-        if role not in ['chef', 'contributeur']:
-            return Response({'detail': 'Rôle invalide'}, status=status.HTTP_400_BAD_REQUEST)
+        # Assure-toi que le nom du ForeignKey dans Issue est 'project'
+        comments = Comment.objects.filter(issue__project=projet)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
 
-        # Utilise le related_name défini dans la classe ProjetCollaborateur (à adapter selon ton modèle)
-        relation = projet.collaborateurs_relations.filter(user=collaborateur).first()
-        if not relation:
-            return Response({'detail': 'Relation collaborateur-projet introuvable'}, status=status.HTTP_404_NOT_FOUND)
+# -----------------------
+# Register
+# -----------------------
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
 
-        relation.role = role
-        relation.save()
+# -----------------------
+# Liste des commentaires (générique)
+# -----------------------
+class CommentListView(generics.ListAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
 
-        return Response({'detail': f'Rôle de {collaborateur.username} mis à jour en {role}'}, status=status.HTTP_200_OK)
+# -----------------------
+# Test endpoint
+# -----------------------
+def test_postman(request):
+    return JsonResponse({"message": "Hello Postman"})

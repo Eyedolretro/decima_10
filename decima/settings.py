@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-(0$yj1nwq_#w)cg#mveyfe=8=dtl_lnwphmx#ttli@%o&)muat'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -40,12 +42,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'issues',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    "issue_tracker.apps.IssueTrackerConfig",
     
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -138,4 +145,77 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
+
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Exemple si le frontend React est en local
+    "http://127.0.0.1:3000",
+]
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {module} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "[{levelname}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "issue_tracker", "logs", "project.log"),
+            "formatter": "verbose",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "django.request": {
+            "handlers": ["file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "myapp": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+
+
+# Sécurité HTTPS (activer en production uniquement)
+SECURE_SSL_REDIRECT = False             # Redirige HTTP → HTTPS
+SESSION_COOKIE_SECURE = True            # Cookies de session seulement via HTTPS
+CSRF_COOKIE_SECURE = True               # Cookies CSRF seulement via HTTPS
+SECURE_HSTS_SECONDS = 31536000          # Force HSTS pendant 1 an
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True   # HSTS aussi pour les sous-domaines
+SECURE_HSTS_PRELOAD = True              # Précharge HSTS dans les navigateurs
+
+
+
+ 
+    
+    

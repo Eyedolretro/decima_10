@@ -4,24 +4,27 @@ from rest_framework import routers
 from rest_framework_nested import routers as nested_routers
 from django.http import HttpResponse
 from issues.views import (
+    UserViewSet,
+    ProjetViewSet,
     IssueViewSet,
     CommentViewSet,
-    RegisterView,
-    ProjetViewSet,
     ProjetCommentViewSet,
+    RegisterView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 
 # -----------------------
 # Router principal
 # -----------------------
 router = routers.DefaultRouter()
+router.register(r'users', UserViewSet, basename='user')
 router.register(r'projets', ProjetViewSet, basename='projet')
-router.register(r'comments', CommentViewSet, basename='comment')
 
 # -----------------------
-# Router imbriqué : issues dans projets
+# Router imbriqué : issues et comments dans projets
 # /api/projets/{projet_id}/issues/
+# /api/projets/{projet_id}/comments/
 # -----------------------
 projets_router = nested_routers.NestedDefaultRouter(router, r'projets', lookup='projet')
 projets_router.register(r'issues', IssueViewSet, basename='projet-issues')
@@ -38,6 +41,7 @@ issues_router.register(r'comments', CommentViewSet, basename='issue-comments')
 # URL Patterns
 # -----------------------
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
 
     # Routes API principales
@@ -47,6 +51,8 @@ urlpatterns = [
 
     # Auth DRF
     path('api-auth/', include('rest_framework.urls')),
+
+    # Auth Register
     path('api/register/', RegisterView.as_view(), name='register'),
 
     # JWT Authentication

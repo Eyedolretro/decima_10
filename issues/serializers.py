@@ -2,13 +2,18 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Projet, Issue, Comment
 
+# -----------------------
 # Users
+# -----------------------
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email']
 
+
+# -----------------------
 # Projets
+# -----------------------
 class ProjetSerializer(serializers.ModelSerializer):
     chef_projet = UserSerializer(read_only=True)
     collaborateurs_ids = serializers.PrimaryKeyRelatedField(
@@ -17,29 +22,48 @@ class ProjetSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(),
         write_only=True
     )
+    collaborateurs = UserSerializer(many=True, read_only=True)  # 👈 pour voir les collaborateurs détaillés
 
     class Meta:
         model = Projet
-        fields = ['id', 'nom', 'description', 'type', 'date_debut', 'date_fin', 'chef_projet', 'collaborateurs_ids']
+        fields = [
+            'id', 'nom', 'description', 'type',
+            'date_debut', 'date_fin',
+            'chef_projet', 'collaborateurs_ids', 'collaborateurs'
+        ]
 
+
+# -----------------------
 # Issues
+# -----------------------
 class IssueSerializer(serializers.ModelSerializer):
     created_by = UserSerializer(read_only=True)
     project = serializers.SerializerMethodField()
 
     class Meta:
         model = Issue
-        fields = ['id', 'title', 'description', 'project', 'created_by', 'priority', 'status']
+        fields = [
+            'id', 'title', 'description',
+            'project', 'created_by',
+            'priority', 'status'
+        ]
 
     def get_project(self, obj):
         if obj.project:
-            return {"id": obj.project.id, "nom": obj.project.nom, "type": obj.project.type}
+            return {
+                "id": obj.project.id,
+                "nom": obj.project.nom,
+                "type": obj.project.type
+            }
         return None
 
+
+# -----------------------
 # Comments
+# -----------------------
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
-    issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
+    issue = serializers.SerializerMethodField(read_only=True)  # 👈 devient read_only
 
     class Meta:
         model = Comment
@@ -59,6 +83,9 @@ class CommentSerializer(serializers.ModelSerializer):
             return {
                 "id": obj.issue.id,
                 "title": obj.issue.title,
-                "project": {"id": obj.issue.project.id, "nom": obj.issue.project.nom} if obj.issue.project else None
+                "project": {
+                    "id": obj.issue.project.id,
+                    "nom": obj.issue.project.nom
+                } if obj.issue.project else None
             }
         return None

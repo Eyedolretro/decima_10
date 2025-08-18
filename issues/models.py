@@ -2,10 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-
-
-
-
 class Issue(models.Model):
     STATUS_CHOICES = [
         ('open', 'Ouvert'),
@@ -20,12 +16,12 @@ class Issue(models.Model):
     ]
 
     project = models.ForeignKey(
-    'Projet',
-    on_delete=models.CASCADE,
-    related_name='issues',
-    null=True,  # Autorise les valeurs NULL
-    blank=True  # Autorise le champ vide dans les formulaires
-)
+        'Projet',
+        on_delete=models.CASCADE,
+        related_name='issues',
+        null=True,
+        blank=True
+    )
 
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -47,6 +43,7 @@ class Comment(models.Model):
     def __str__(self):
         return f"Commentaire sur {self.issue.title} par {self.author.username}"
 
+
 class Projet(models.Model):
     TYPE_CHOICES = [
         ('backend', 'Back-end'),
@@ -66,7 +63,6 @@ class Projet(models.Model):
         related_name='projets_auteur',
     )
 
-    # ManyToMany avec classe intermédiaire "through"
     collaborateurs = models.ManyToManyField(
         User,
         through='ProjetCollaborateur',
@@ -79,7 +75,7 @@ class Projet(models.Model):
     def __str__(self):
         return self.nom
 
-# Classe intermédiaire pour stocker le rôle du collaborateur
+
 class ProjetCollaborateur(models.Model):
     ROLE_CHOICES = [
         ('chef', 'Chef de projet'),
@@ -91,7 +87,7 @@ class ProjetCollaborateur(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='contributeur')
 
     class Meta:
-        unique_together = ('projet', 'user')  # un utilisateur ne peut être qu’une fois sur un projet
+        unique_together = ('projet', 'user')
 
     def __str__(self):
         return f"{self.user.username} ({self.role}) sur {self.projet.nom}"

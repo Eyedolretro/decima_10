@@ -10,6 +10,7 @@ from issues.views import (
     CommentViewSet,
     ProjetCommentViewSet,
     RegisterView,
+    ProjetCollaborateurViewSet,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -29,6 +30,11 @@ router.register(r'projets', ProjetViewSet, basename='projet')
 projets_router = nested_routers.NestedDefaultRouter(router, r'projets', lookup='projet')
 projets_router.register(r'issues', IssueViewSet, basename='projet-issues')
 projets_router.register(r'comments', ProjetCommentViewSet, basename='projet-comments')
+# urls.py
+projets_router.register(
+    r'collaborateurs', ProjetCollaborateurViewSet, basename='projet-collaborateurs'
+)
+
 
 # -----------------------
 # Router imbriqué : comments dans issues

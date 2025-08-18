@@ -1,11 +1,13 @@
-from rest_framework import viewsets, generics, permissions
+from rest_framework import viewsets, generics, permissions, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from .serializers import UserSerializer, ProjetSerializer, IssueSerializer, CommentSerializer
 from .permissions import IsAuthorOrAdmin
 from .controllers import ProjetController, IssueController, CommentController
+from .models import Projet
 
 
 # -----------------------
@@ -96,6 +98,53 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+
+
+# -----------------------
+# Collaborateurs d'un projet
+# -----------------------
+class ProjetCollaborateurViewSet(viewsets.ViewSet):
+    """
+    Gestion des collaborateurs d'un projet.
+    """
+
+    def list(self, request, projet_pk=None):
+        projet = get_object_or_404(Projet, pk=projet_pk)
+        if not hasattr(projet, "collaborateurs"):
+            return Response(
+                {"error": "Ce projet n'a pas de collaborateurs définis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        collaborateurs = projet.collaborateurs.all()
+        serializer = UserSerializer(collaborateurs, many=True)
+        return Response(serializer.data)
+
+    def create(self, request, projet_pk=None):
+        projet = get_object_or_404(Projet, pk=projet_pk)
+        if not hasattr(projet, "collaborateurs"):
+            return Response(
+                {"error": "Ce projet ne peut pas avoir de collaborateurs."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response({"error": "user_id requis"}, status=400)
+
+        user = get_object_or_404(User, pk=user_id)
+        projet.collaborateurs.add(user)
+        return Response({"message": "Collaborateur ajouté"}, status=201)
+
+    def destroy(self, request, pk=None, projet_pk=None):
+        projet = get_object_or_404(Projet, pk=projet_pk)
+        if not hasattr(projet, "collaborateurs"):
+            return Response(
+                {"error": "Ce projet n'a pas de collaborateurs à supprimer."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user = get_object_or_404(User, pk=pk)
+        projet.collaborateurs.remove(user)
+        return Response({"message": "Collaborateur supprimé"}, status=204)
 
 
 # -----------------------

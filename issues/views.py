@@ -1,5 +1,5 @@
 from rest_framework import viewsets, generics, permissions, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -8,6 +8,8 @@ from .serializers import UserSerializer, ProjetSerializer, IssueSerializer, Comm
 from .permissions import IsAuthorOrAdmin
 from .controllers import ProjetController, IssueController, CommentController
 from .models import Projet
+from rest_framework.decorators import action
+
 
 
 # -----------------------
@@ -29,56 +31,109 @@ class UserViewSet(viewsets.ModelViewSet):
 # Projets
 # -----------------------
 class ProjetViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les projets.
+
+    list:
+    Retourne la liste de tous les projets accessibles à l'utilisateur.
+
+    retrieve:
+    Retourne les détails d'un projet spécifique.
+
+    create:
+    Crée un nouveau projet.
+
+    update:
+    Met à jour un projet existant.
+
+    partial_update:
+    Met à jour partiellement un projet.
+
+    destroy:
+    Supprime un projet.
+    """
+    queryset = Projet.objects.all()
     serializer_class = ProjetSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return ProjetController.get_projets()
-
-    def perform_create(self, serializer):
-        projet = ProjetController.create_projet(self.request.user, **serializer.validated_data)
-        serializer.instance = projet
-
-
+    @action(detail=True, methods=['get'])
+    def collaborateurs(self, request, pk=None):
+        """
+        Retourne la liste des collaborateurs d'un projet.
+        """
+        projet = self.get_object()
+        serializer = ProjetCollaborateurSerializer(projet.collaborateurs, many=True)
+        return Response(serializer.data)
 # -----------------------
 # Issues
 # -----------------------
 class IssueViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les issues liées aux projets.
+
+    list:
+    Retourne la liste des issues pour un projet donné.
+
+    retrieve:
+    Retourne les détails d'une issue spécifique.
+
+    create:
+    Crée une nouvelle issue pour un projet.
+
+    update:
+    Met à jour une issue existante.
+
+    partial_update:
+    Met à jour partiellement une issue.
+
+    destroy:
+    Supprime une issue.
+    """
     serializer_class = IssueSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return IssueController.get_issues(self.kwargs.get("projet_pk"))
-
-    def perform_create(self, serializer):
-        issue = IssueController.create_issue(
-            projet_id=self.kwargs.get("projet_pk"),
-            user=self.request.user,
-            **serializer.validated_data
-        )
-        serializer.instance = issue
+        """
+        Retourne les issues filtrées par projet.
+        """
+        projet_id = self.kwargs.get('projet_pk')
+        return Issue.objects.filter(projet_id=projet_id)
 
 
 # -----------------------
 # Comments
 # -----------------------
 class CommentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les commentaires sur les issues.
+
+    list:
+    Retourne tous les commentaires d'une issue.
+
+    retrieve:
+    Retourne les détails d'un commentaire spécifique.
+
+    create:
+    Crée un commentaire pour une issue.
+
+    update:
+    Met à jour un commentaire existant.
+
+    partial_update:
+    Met à jour partiellement un commentaire.
+
+    destroy:
+    Supprime un commentaire.
+    """
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAuthorOrAdmin]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return CommentController.get_comments(
-            projet_id=self.kwargs.get("projet_pk"),
-            issue_id=self.kwargs.get("issue_pk"),
-        )
-
-    def perform_create(self, serializer):
-        comment = CommentController.create_comment(
-            issue_id=self.kwargs.get("issue_pk"),
-            user=self.request.user,
-            **serializer.validated_data
-        )
-        serializer.instance = comment
+        """
+        Retourne les commentaires filtrés par issue et projet.
+        """
+        issue_id = self.kwargs.get('issue_pk')
+        return Comment.objects.filter(issue_id=issue_id)
 
 
 # -----------------------

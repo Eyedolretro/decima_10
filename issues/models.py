@@ -45,32 +45,37 @@ class Comment(models.Model):
 
 
 class Projet(models.Model):
-    TYPE_CHOICES = [
-        ('backend', 'Back-end'),
-        ('frontend', 'Front-end'),
-        ('ios', 'iOS'),
-        ('android', 'Android'),
-    ]
-
-    nom = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    date_debut = models.DateField(null=True, blank=True)
-    date_fin = models.DateField(null=True, blank=True)
+    nom = models.CharField(
+        max_length=255,
+        help_text="Nom du projet"
+    )
+    description = models.TextField(
+        help_text="Description détaillée du projet"
+    )
+    type = models.CharField(
+        max_length=50,
+        help_text="Type de projet"
+    )
+    date_debut = models.DateField(
+        null=True, blank=True,
+        help_text="Date de début du projet (optionnel)"
+    )
+    date_fin = models.DateField(
+        null=True, blank=True,
+        help_text="Date de fin du projet (optionnel)"
+    )
     chef_projet = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='projets_auteur',
+        related_name='projets_chef',
+        help_text="Utilisateur responsable du projet"
     )
-
     collaborateurs = models.ManyToManyField(
         User,
-        through='ProjetCollaborateur',
         related_name='projets_collaborateur',
         blank=True,
+        help_text="Liste des collaborateurs"
     )
-    cree_le = models.DateTimeField(auto_now_add=True)
-    modifie_le = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.nom

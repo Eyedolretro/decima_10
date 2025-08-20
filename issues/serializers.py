@@ -15,23 +15,25 @@ class UserSerializer(serializers.ModelSerializer):
 # Projets
 # -----------------------
 class ProjetSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour le modèle Projet.
+
+    Champs:
+        id (int): Identifiant unique du projet.
+        nom (str): Nom du projet.
+        description (str): Description détaillée.
+        type (str): Type de projet.
+        date_debut (date, optionnel): Date de début.
+        date_fin (date, optionnel): Date de fin.
+        chef_projet (User): Utilisateur responsable.
+        collaborateurs (list[User], read-only): Liste des collaborateurs.
+    """
     chef_projet = UserSerializer(read_only=True)
-    collaborateurs_ids = serializers.PrimaryKeyRelatedField(
-        many=True,
-        source='collaborateurs',
-        queryset=User.objects.all(),
-        write_only=True
-    )
-    collaborateurs = UserSerializer(many=True, read_only=True)  # 👈 pour voir les collaborateurs détaillés
+    collaborateurs = UserSerializer(many=True, read_only=True)
 
     class Meta:
         model = Projet
-        fields = [
-            'id', 'nom', 'description', 'type',
-            'date_debut', 'date_fin',
-            'chef_projet', 'collaborateurs_ids', 'collaborateurs'
-        ]
-
+        fields = '__all__'
 
 # -----------------------
 # Issues

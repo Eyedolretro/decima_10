@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     "issue_tracker.apps.IssueTrackerConfig",
+    'drf_yasg',
+    
+
     
 ]
 
@@ -137,8 +140,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',  # commenter ou supprimer
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    )
 }
+
 
 
 SIMPLE_JWT = {
@@ -202,6 +210,19 @@ LOGGING = {
             "propagate": False,
         },
     },
+}
+
+
+
+# Ajouter JWT comme sécurité pour Swagger
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
 }
 
 

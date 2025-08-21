@@ -32,24 +32,24 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
-
 INSTALLED_APPS = [
+    # Django apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'issues',
-    'rest_framework_simplejwt.token_blacklist',
-    'corsheaders',
-    "issue_tracker.apps.IssueTrackerConfig",
-    'drf_yasg',
-    
 
-    
+    # Third-party
+    'rest_framework',
+    'drf_spectacular',
+
+    # Tes apps
+    'issues',
+    'issue_tracker',
 ]
+
 
 
 MIDDLEWARE = [
@@ -69,7 +69,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-        'APP_DIRS': True,
+        'APP_DIRS': True,  # <- Très important pour Swagger UI
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -138,13 +138,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',  # commenter ou supprimer
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
-    )
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 
@@ -223,6 +220,14 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     }
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Projet',
+    'DESCRIPTION': 'Documentation de l’API de ton projet',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 

@@ -7,8 +7,12 @@ from django.shortcuts import get_object_or_404
 from .serializers import UserSerializer, ProjetSerializer, IssueSerializer, CommentSerializer
 from .permissions import IsAuthorOrAdmin
 from .controllers import ProjetController, IssueController, CommentController
-from .models import Projet
+from .models import Projet,Issue
 from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema, extend_schema_view
+
+
+
 
 
 
@@ -67,37 +71,21 @@ class ProjetViewSet(viewsets.ModelViewSet):
 # -----------------------
 # Issues
 # -----------------------
+@extend_schema_view(
+    list=extend_schema(description="Retourne la liste des issues."),
+    retrieve=extend_schema(description="Retourne une issue spécifique."),
+    create=extend_schema(description="Crée une nouvelle issue."),
+    update=extend_schema(description="Met à jour une issue existante."),
+    partial_update=extend_schema(description="Met à jour partiellement une issue."),
+    destroy=extend_schema(description="Supprime une issue."),
+)
 class IssueViewSet(viewsets.ModelViewSet):
     """
     ViewSet pour gérer les issues liées aux projets.
-
-    list:
-    Retourne la liste des issues pour un projet donné.
-
-    retrieve:
-    Retourne les détails d'une issue spécifique.
-
-    create:
-    Crée une nouvelle issue pour un projet.
-
-    update:
-    Met à jour une issue existante.
-
-    partial_update:
-    Met à jour partiellement une issue.
-
-    destroy:
-    Supprime une issue.
     """
+    queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        """
-        Retourne les issues filtrées par projet.
-        """
-        projet_id = self.kwargs.get('projet_pk')
-        return Issue.objects.filter(projet_id=projet_id)
 
 
 # -----------------------

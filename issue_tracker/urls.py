@@ -18,15 +18,10 @@ router = routers.DefaultRouter()
 router.register(r'issues', IssueViewSet)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-
-    # API CRUD tickets
-    path('api/', include(router.urls)),
-
-    # Authentification
-    path('api/register/', RegisterView.as_view(), name='register'),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('', include(router.urls)),  # /api/issues/
+    path('register/', RegisterView.as_view(), name='register'),
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('test/', test_postman, name='test_postman'),
     path('test-post/', test_postman_post, name='test_postman_post'),
 ]

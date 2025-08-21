@@ -16,6 +16,7 @@ from issues.views import (
     ProjetCollaborateurViewSet,
     RegisterView,
 )
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 # -----------------------
 # Routers principaux
@@ -56,29 +57,12 @@ swagger_schema = schema_view.with_ui('swagger', cache_timeout=0)
 # URL Patterns
 # -----------------------
 urlpatterns = [
-    # Admin
     path('admin/', admin.site.urls),
 
-    # Routes API principales
-    path('api/', include(router.urls)),
-    path('api/', include(projets_router.urls)),
-    path('api/', include(issues_router.urls)),
+    # OpenAPI Schema et Swagger
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
-    # Auth DRF
-    path('api-auth/', include('rest_framework.urls')),
-
-    # Auth Register
-    path('api/register/', RegisterView.as_view(), name='register'),
-
-    # JWT Authentication
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
-    # Accueil API
-    path('', lambda request: HttpResponse("Bienvenue sur l'API!"), name='home'),
-
-    # Swagger / Redoc
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    # API principale
+    path('api/', include('issue_tracker.urls')),
 ]
